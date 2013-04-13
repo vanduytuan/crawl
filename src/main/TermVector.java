@@ -12,7 +12,7 @@ import java.util.Hashtable;
  * @author WIN7
  */
 public class TermVector {
-    public int df;
+    int df;
     Hashtable tf;
     Hashtable tf_idf;
     public TermVector()
@@ -28,6 +28,21 @@ public class TermVector {
         tf = new Hashtable();
         tf_idf = new Hashtable();
         updateTF(docID);
+    }
+    
+    public int getDF()
+    {
+        return df;
+    }
+    
+    public Hashtable getTF()
+    {
+        return tf;
+    }
+    
+    public Hashtable getTF_IDF()
+    {
+        return tf_idf;
     }
     
     public void updateTermVector(int docID, String term)
