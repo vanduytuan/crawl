@@ -33,9 +33,9 @@ import org.jsoup.select.Elements;
  */
 public class Crawler {
 
-    private String frontUrl = "";
-    private String backUrl = "";
-    private String ajaxUrl = "";
+    private String frontUrl = "http://www.tripadvisor.com/Restaurant_Review-g45963-d422627-Reviews";
+    private String backUrl = "-Eiffel_Tower_Restaurant_at_Paris_Las_Vegas-Las_Vegas_Nevada.html";
+    private String ajaxUrl = "http://www.tripadvisor.com/ExpandedUserReviews-g45963-d422627?target=156507866&context=1&reviews=156507866&servlet=Restaurant_Review&expand=1&extraad=true";
     private String targetNo;
     private String site;
     private String parameter;
@@ -45,10 +45,7 @@ public class Crawler {
     private final String dataFolder = "./data";
     private final Pattern datePattern = Pattern.compile("\\d{1,2}/\\d{1,2}/\\d{2,4}");
 
-    public Crawler(String frontUrl, String backUrl, String ajaxUrl) {
-        this.frontUrl = frontUrl;
-        this.backUrl = backUrl;
-        this.ajaxUrl = ajaxUrl;
+    public Crawler() {
         String temp = "";
         temp = "?target=";
         int index = this.ajaxUrl.indexOf(temp);
