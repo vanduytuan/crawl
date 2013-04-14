@@ -9,6 +9,7 @@ package WordProcessing;
  * @author VanDuyTuan
  */
 public class Term {
+
     private String lexicon;
     private String posTag;
 
@@ -35,6 +36,4 @@ public class Term {
 
     public Term() {
     }
-
-    
 }
