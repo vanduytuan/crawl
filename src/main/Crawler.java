@@ -8,6 +8,8 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,17 +18,45 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.plaf.metal.MetalIconFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.formula.functions.Column;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
+
 import org.jsoup.select.Elements;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  *
@@ -50,9 +80,118 @@ public class Crawler {
         // TODO code application logic here
         Crawler crawler = new Crawler();
         // crawl
-        crawler.crawl();
+        //crawler.crawl();
         // generate the xml file
         crawler.combineXML();
+        crawler.addHandLabel();
+    }
+    /*
+     * function to add the human label to the combined xml file
+     */
+
+    private SortedMap<Integer, Integer> getLabels() {
+        SortedMap<Integer, Integer> labels = new TreeMap<Integer, Integer>();
+        // read all the human label
+        String humanLabelFileLink = "./handLabel/Hand label.xlsx";
+        try {
+            InputStream is = new FileInputStream(new File(humanLabelFileLink));
+            XSSFWorkbook wb = new XSSFWorkbook(is);
+            Sheet worksheet = wb.getSheetAt(0);
+            int rowNo = 0, docId, polarity, confidence = 1;
+            String docIdString;
+            Row currentRow;
+            Cell tempCell;
+            Iterator<Row> rows = worksheet.rowIterator();
+            while (rows.hasNext()) {
+
+                currentRow = rows.next();
+                tempCell = currentRow.getCell(0);
+                if (tempCell.getCellType() == 1) {
+                    docIdString = tempCell.getStringCellValue();
+                    if (docIdString.equals("")) {
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+                try {
+                    docId = (int) (tempCell.getNumericCellValue());
+                    polarity = (int) (currentRow.getCell(1).getNumericCellValue());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    continue;
+                }
+                labels.put(docId, polarity);
+                rowNo++;
+            }
+            is.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return labels;
+    }
+
+    private org.w3c.dom.Document getXMLDataDocument() {
+        String xmlFileLink = "./data/data.xml";
+        File xmlFile = new File(xmlFileLink);
+        org.w3c.dom.Document document = null;
+        try {
+            DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
+            document = docBuilder.parse(xmlFile);
+        } catch (Exception e) {
+            return null;
+        }
+        return document;
+    }
+
+    private void writeXMLDataDocument(org.w3c.dom.Document document) {
+        String xmlFileLink = "./data/labeleData.xml";
+        File xmlFile = new File(xmlFileLink);
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(xmlFile));
+            TransformerFactory tFactory =
+                    TransformerFactory.newInstance();
+            Transformer transformer = tFactory.newTransformer();
+            DOMSource source = new DOMSource(document);
+            StreamResult result = new StreamResult(out);
+            transformer.transform(source, result); 
+            //out.write(content);
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void addHandLabel() {
+
+        org.w3c.dom.Document document = getXMLDataDocument();
+        if (document == null) {
+            return;
+        }
+
+        SortedMap<Integer, Integer> labels = getLabels();
+        Set<Integer> set = labels.keySet();
+
+        Iterator<Integer> iterator = set.iterator();
+        Integer key, value;
+        NodeList list = document.getElementsByTagName("doc");
+        Node node;
+        org.w3c.dom.Element element, polarElement, confiElement;
+        int length = list.getLength();
+        int index = 0;
+        while (iterator.hasNext()) {
+            key = iterator.next();
+            value = labels.get(key);
+            element = (org.w3c.dom.Element) list.item(key - 1);
+            polarElement = (org.w3c.dom.Element) element.getElementsByTagName("polarity").item(0);
+            confiElement = (org.w3c.dom.Element) element.getElementsByTagName("confidence").item(0);
+            polarElement.setTextContent(value + "");
+            confiElement.setTextContent("1");
+        }
+        writeXMLDataDocument(document);
     }
 
     public Crawler() {
@@ -388,7 +527,7 @@ public class Crawler {
         try {
             FileWriter out = new FileWriter(xmlFile);
             out.write("<root>" + "\n");
-            for (i = 1; i < length - 1; i++) {
+            for (i = 1; i < length - 2; i++) {
                 dataFile = new File(dataFolder + "/" + i + ".txt");
 
                 in = new BufferedReader(new FileReader(dataFile));
