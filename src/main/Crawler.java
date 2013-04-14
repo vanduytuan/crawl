@@ -3,6 +3,7 @@
  * and open the template in the editor.
  */
 package main;
+
 import org.apache.commons.lang3.StringEscapeUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -44,6 +45,15 @@ public class Crawler {
     private String startPage;
     private final String dataFolder = "./data";
     private final Pattern datePattern = Pattern.compile("\\d{1,2}/\\d{1,2}/\\d{2,4}");
+
+    public static void main(String[] args) {
+        // TODO code application logic here
+        Crawler crawler = new Crawler();
+        // crawl
+        crawler.crawl();
+        // generate the xml file
+        crawler.combineXML();
+    }
 
     public Crawler() {
         String temp = "";
@@ -357,12 +367,14 @@ public class Crawler {
         createDataFolder();
         getAllReviews();
     }
-    private String convertISOtoASCII(String line){
+
+    private String convertISOtoASCII(String line) {
         line = StringEscapeUtils.unescapeHtml4(line);
         line = line.replaceAll("&", "and");
         return line;
         //return Normalizer.normalize(line, Normalizer.Form.NFC);
     }
+
     public void combineXML() {
         File dataDir = new File(dataFolder);
         File xmlFile = createDataFile("data.xml");
@@ -376,7 +388,7 @@ public class Crawler {
         try {
             FileWriter out = new FileWriter(xmlFile);
             out.write("<root>" + "\n");
-            for (i = 1; i < length-1; i++) {
+            for (i = 1; i < length - 1; i++) {
                 dataFile = new File(dataFolder + "/" + i + ".txt");
 
                 in = new BufferedReader(new FileReader(dataFile));
@@ -390,9 +402,9 @@ public class Crawler {
                 }
                 in.close();
                 line = convertISOtoASCII(sb.toString());
-                
+
                 out.write(line + "\n");
-                
+
             }
             out.write("</root>" + "\n");
             out.close();

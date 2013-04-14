@@ -12,10 +12,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        // TODO code application logic here
-        Crawler crawler = new Crawler();
-        //crawler.crawl();
-        crawler.combineXML();
+        
 
     }
 
