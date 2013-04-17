@@ -22,7 +22,11 @@ public class NaiveBayesClassifier {
     public static void main(String[] args) {
         NaiveBayesClassifier nbc = new NaiveBayesClassifier();
         Dictionary d = nbc.d;
-        int total_reviews = d.dictionaryBuilder("labelData.xml");
+        d.dictionaryBuilder("labelData.xml");
+
+        //10-fold cross validation
+        d = nbc.tenFoldValidation(d.getTrainingReviewList());
+
         Hashtable<String, Double>[] bayesTermWeight = d.getNaiveBayesTermWeight();
         Review[] testReviewList = d.getTestReviewList();
         double[] polarity = new double[testReviewList.length];
@@ -30,20 +34,22 @@ public class NaiveBayesClassifier {
         int[] classCounter = d.getClassCounter();
         double[] classPriorProb = new double[3];
         for (int i = 0; i < 3; i++) {
+            System.out.println("DKM " + classCounter[i]);
             classPriorProb[i] = classCounter[i] / 100.0;
         }
         for (int i = 0; i < testReviewList.length; i++) {
             double[] classifierResult = nbc.classifyReview(testReviewList[i], classPriorProb, bayesTermWeight);
-            polarity[i] =  classifierResult[0];
+            polarity[i] = classifierResult[0];
             confidence[i] = classifierResult[1];
-            System.out.println(testReviewList[i].getDocID() + " " + classifierResult[0] + " " + classifierResult[1]);
+            double true_value = testReviewList[i].getPolarity()+1.0;
+            System.out.println(testReviewList[i].getDocID() + " " + classifierResult[0] + " " + classifierResult[1] + " " + true_value);
         }
     }
 
     public double[] classifyReview(Review review, double[] classPriorProb, Hashtable<String, Double>[] bayesTermWeight) {
         double[] cmap = new double[3];
         for (int i = 0; i < 3; i++) {
-            cmap[i] = Math.log(classPriorProb[i]);
+            cmap[i] = classPriorProb[i];
             //System.out.println("DKM "+cmap[i]);
         }
         Stemmer stemmer = new Stemmer();
@@ -83,8 +89,29 @@ public class NaiveBayesClassifier {
     public void updateCMap(double[] cmap, String stemWord, Hashtable<String, Double>[] bayesTermWeight) {
         for (int i = 0; i < 3; i++) {
             if (bayesTermWeight[i].containsKey(stemWord)) {
-                cmap[i] += Math.log((double) bayesTermWeight[i].get(stemWord));
+                cmap[i] *= (double) bayesTermWeight[i].get(stemWord);
             }
         }
+    }
+
+    public Dictionary tenFoldValidation(Review[] trainingReviewList) {
+        Review[] newTrainingReviewList, newTestReviewList;
+        newTrainingReviewList = new Review[108];
+        newTestReviewList = new Review[12];
+        for (int i = 9; i < 117; i++) {
+            newTrainingReviewList[i-9] = trainingReviewList[i];
+        }
+
+        for (int i = 0; i < 9; i++) {
+            newTestReviewList[i] = trainingReviewList[i];
+        }
+        
+        for (int i = 117; i < 120; i++) {
+            newTestReviewList[i - 108] = trainingReviewList[i];
+        }
+
+        Dictionary dict = new Dictionary();
+        dict.dictionaryBuilder(newTrainingReviewList, newTestReviewList);
+        return dict;
     }
 }

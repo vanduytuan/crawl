@@ -131,6 +131,30 @@ public class Dictionary {
         return total_reviews;
     }
 
+    public int dictionaryBuilder(Review[] trainingReviewList, Review[] testReviewList) {
+        this.trainingReviewList = trainingReviewList;
+        this.testReviewList = testReviewList;
+        int total_reviews = trainingReviewList.length;
+
+        for (int i = 0; i < total_reviews; i++) {
+            reviewScanner(trainingReviewList[i]);
+        }
+
+        //update the tf_idf of the term
+        LabelTermVector labeltermvector = new LabelTermVector();
+        labeltermvector.update(termListVector, reviewClassification, total_terms);
+
+        Enumeration e = labeltermvector.label_tf_idf[0].keys();
+        while (e.hasMoreElements()) {
+            String term = e.nextElement().toString();
+            for (int i = 0; i < 3; i++) {
+                bayesTermWeight[i].put(term, computeBayesTermWeight(labeltermvector, term, i));
+            }
+        }
+
+        return total_reviews;
+    }
+
     //compute Bayes term weight
     public double computeBayesTermWeight(LabelTermVector labeltermvector, String term, int i) {
         double tf_idf_value = (double) labeltermvector.label_tf_idf[i].get(term);
@@ -149,8 +173,8 @@ public class Dictionary {
 
             NodeList docNL = document.getElementsByTagName("doc");
             int totalDocs = docNL.getLength();
-            trainingReviewList = new Review[100];
-            testReviewList = new Review[1211];
+            trainingReviewList = new Review[120];
+            testReviewList = new Review[1191];
             int trainingCount = 0, testCount = 0;
 
             for (int i = 0; i < totalDocs; i++) {
@@ -226,10 +250,10 @@ public class Dictionary {
         double sum = 0.0;
         while (e.hasMoreElements()) {
             String term = e.nextElement().toString();
-            sum += (double)test[0].get(term);
+            sum += (double) test[0].get(term);
             System.out.println(term + " " + test[2].get(term));
         }
-        System.out.println("DKM "+sum);
+        System.out.println("DKM " + sum);
         System.out.println(d.classCounter[0] + " " + d.classCounter[1] + " " + d.classCounter[2]);
     }
 }
