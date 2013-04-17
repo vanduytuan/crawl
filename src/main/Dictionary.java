@@ -6,14 +6,11 @@ package main;
 
 import WordProcessing.Stemmer;
 import java.io.File;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.StringTokenizer;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.util.Version;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -27,37 +24,75 @@ import org.xml.sax.SAXParseException;
  */
 public class Dictionary {
 
-    Hashtable termsVector;
+    Hashtable<String, DocumentTermVector> termListVector;
+    Hashtable<Integer, Double> reviewClassification;
+    Hashtable<String, Double>[] bayesTermWeight;
+    Review[] trainingReviewList;
+    Review[] testReviewList;
+    int[] classCounter;
     int total_terms;
 
+    //constructor
     public Dictionary() {
-        termsVector = new Hashtable();
+        termListVector = new Hashtable();
+        reviewClassification = new Hashtable();
+        bayesTermWeight = new Hashtable[3];
+        classCounter = new int[3];
+        for (int i = 0; i < 3; i++) {
+            classCounter[i] = 0;
+            bayesTermWeight[i] = new Hashtable();
+        }
+
         total_terms = 0;
     }
 
-    public Hashtable getTermsVector() {
-        return termsVector;
+    //accessors
+    public Hashtable<String, DocumentTermVector> gettermListVector() {
+        return termListVector;
+    }
+
+    public Hashtable<Integer, Double> getReviewClassification() {
+        return reviewClassification;
+    }
+
+    public Hashtable<String, Double>[] getNaiveBayesTermWeight() {
+        return bayesTermWeight;
     }
 
     public int getTotalTerms() {
         return total_terms;
     }
 
+    public int[] getClassCounter() {
+        return classCounter;
+    }
+
+    public Review[] getTrainingReviewList() {
+        return trainingReviewList;
+    }
+
+    public Review[] getTestReviewList() {
+        return testReviewList;
+    }
+
     //update the dictionary
     public void updateDictionary(int docID, String term) {
-        if (termsVector.containsKey(term)) {
-            TermVector t = (TermVector) termsVector.get(term);
-            t.updateTermVector(docID, term);
+        if (termListVector.containsKey(term)) {
+            DocumentTermVector t = (DocumentTermVector) termListVector.get(term);
+            t.updateTermVector(docID);
         } else {
-            TermVector t = new TermVector(docID);
-            termsVector.put(term, t);
+            DocumentTermVector t = new DocumentTermVector(docID);
+            termListVector.put(term, t);
             total_terms++;
         }
     }
 
-    //scan the review and build up the dictionary
+    //scan a single review
     public void reviewScanner(Review review) {
         int docID = review.getDocID();
+        double polarity = review.getPolarity();
+        classCounter[(int) (polarity + 1)]++;
+        reviewClassification.put(docID, polarity);
         Stemmer stemmer = new Stemmer();
         String comment = review.getComment();
         String rawReview = toRawReview(comment);
@@ -67,25 +102,43 @@ public class Dictionary {
             if (StopWordList.isStopWord(token)) {
                 continue;
             }
-            String stemWord = stemmer.stem(st.nextToken());
+            String stemWord = stemmer.stem(token);
             updateDictionary(docID, stemWord);
         }
     }
 
-    //scan all the reviews
-    public int reviewListScanner(String filename) {
-        Review[] reviewList = getReviewList(filename);
-        int total_reviews = reviewList.length;
+    //scan all the reviews and build up the dictionary
+    public int dictionaryBuilder(String filename) {
+        getTrainingReviewList(filename);
+        int total_reviews = trainingReviewList.length;
 
         for (int i = 0; i < total_reviews; i++) {
-            reviewScanner(reviewList[i]);
+            reviewScanner(trainingReviewList[i]);
+        }
+
+        //update the tf_idf of the term
+        LabelTermVector labeltermvector = new LabelTermVector();
+        labeltermvector.update(termListVector, reviewClassification, total_terms);
+
+        Enumeration e = labeltermvector.label_tf_idf[0].keys();
+        while (e.hasMoreElements()) {
+            String term = e.nextElement().toString();
+            for (int i = 0; i < 3; i++) {
+                bayesTermWeight[i].put(term, computeBayesTermWeight(labeltermvector, term, i));
+            }
         }
 
         return total_reviews;
     }
 
-    public Review[] getReviewList(String filename) {
-        Review[] reviews = null;
+    //compute Bayes term weight
+    public double computeBayesTermWeight(LabelTermVector labeltermvector, String term, int i) {
+        double tf_idf_value = (double) labeltermvector.label_tf_idf[i].get(term);
+        double weight = (tf_idf_value + 1) / (labeltermvector.label_tf_idf_sum[i] + total_terms);
+        return weight;
+    }
+
+    public void getTrainingReviewList(String filename) {
         try {
             DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
@@ -96,11 +149,17 @@ public class Dictionary {
 
             NodeList docNL = document.getElementsByTagName("doc");
             int totalDocs = docNL.getLength();
-            reviews = new Review[totalDocs];
+            trainingReviewList = new Review[100];
+            testReviewList = new Review[1211];
+            int trainingCount = 0, testCount = 0;
 
             for (int i = 0; i < totalDocs; i++) {
+
                 Node doc = docNL.item(i);
                 Element docE = (Element) doc;
+
+                NodeList polarityNL = docE.getElementsByTagName("polarity");
+                Element polarityE = (Element) polarityNL.item(0);
 
                 NodeList starNL = docE.getElementsByTagName("stars");
                 Element starE = (Element) starNL.item(0);
@@ -116,15 +175,25 @@ public class Dictionary {
                 double stars = Double.parseDouble(starE.getFirstChild().getNodeValue());
                 String comment = reviewE.getFirstChild().getNodeValue();
                 String title = titleE.getFirstChild().getNodeValue();
-                reviews[i] = new Review(docID, stars, comment, title);
-                System.out.println(docID);
-                System.out.println(stars);
-                System.out.println(comment);
-                System.out.println(title);
-                System.out.println();
+                if ("NULL".equals(polarityE.getFirstChild().getNodeValue().toString())) {
+                    testReviewList[testCount] = new Review(docID, stars, comment, title);
+                    testCount++;
+                } else {
+                    double polarity = Double.parseDouble(polarityE.getFirstChild().getNodeValue());
+                    trainingReviewList[trainingCount] = new Review(docID, stars, comment, title, polarity);
+                    trainingCount++;
+                }
+                //if (count >= 100) {
+                //break;
+                //}
+                //System.out.println(docID);
+                //System.out.println(stars);
+                //System.out.println(comment);
+                //System.out.println(title);
+                //System.out.println(polarity);
+                //System.out.println();
                 //System.out.println(review.comment);
             }
-
 
         } catch (SAXParseException err) {
             System.out.println("** Parsing error" + ", line "
@@ -138,7 +207,6 @@ public class Dictionary {
         } catch (Throwable t) {
             t.printStackTrace();
         }
-        return reviews;
         //System.exit (0);
     }//end of main
 
@@ -150,12 +218,18 @@ public class Dictionary {
     }
 
     public static void main(String[] args) {
-        String review = "MATLAB don't toolbox that can be used for various tasks in text mining specifically i) indexing, ii) retrieval, iii) dimensionality reduction, iv) clustering, v) classification. Most of TMG is written in MATLAB and parts in Perl. It contains implementations of LSI, clustered LSI, NMF and other methods.";
-        StringTokenizer st = new StringTokenizer(review);
-        while (st.hasMoreTokens()) {
-            System.out.println(st.nextToken());
+        Dictionary d = new Dictionary();
+        int total_reviews = d.dictionaryBuilder("labelData.xml");
+        Hashtable[] test = d.bayesTermWeight;
+        Enumeration e = test[1].keys();
+        //System.out.println(termListVector.size());
+        double sum = 0.0;
+        while (e.hasMoreElements()) {
+            String term = e.nextElement().toString();
+            sum += (double)test[0].get(term);
+            System.out.println(term + " " + test[2].get(term));
         }
-        System.out.println(Math.log10(99));
-        //System.out.println(toRawReview(review));
+        System.out.println("DKM "+sum);
+        System.out.println(d.classCounter[0] + " " + d.classCounter[1] + " " + d.classCounter[2]);
     }
 }
