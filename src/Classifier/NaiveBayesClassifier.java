@@ -98,15 +98,15 @@ public class NaiveBayesClassifier {
         Review[] newTrainingReviewList, newTestReviewList;
         newTrainingReviewList = new Review[108];
         newTestReviewList = new Review[12];
-        for (int i = 9; i < 117; i++) {
-            newTrainingReviewList[i-9] = trainingReviewList[i];
+        for (int i = 8; i < 116; i++) {
+            newTrainingReviewList[i-8] = trainingReviewList[i];
         }
 
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 8; i++) {
             newTestReviewList[i] = trainingReviewList[i];
         }
         
-        for (int i = 117; i < 120; i++) {
+        for (int i = 116; i < 120; i++) {
             newTestReviewList[i - 108] = trainingReviewList[i];
         }
 
