@@ -25,7 +25,7 @@ import org.xml.sax.SAXParseException;
 public class Dictionary {
 
     Hashtable<String, DocumentTermVector> termListVector;
-    Hashtable<String, DocumentTermVector> titleListVector;
+    //Hashtable<String, DocumentTermVector> titleListVector;
     Hashtable<Integer, Double> reviewClassification;
     Hashtable<String, Double>[] bayesTermWeight;
     Review[] trainingReviewList;
@@ -36,6 +36,7 @@ public class Dictionary {
     //constructor
     public Dictionary() {
         termListVector = new Hashtable();
+        //titleListVector = new Hashtable();
         reviewClassification = new Hashtable();
         bayesTermWeight = new Hashtable[3];
         classCounter = new int[3];
@@ -77,13 +78,16 @@ public class Dictionary {
     }
 
     //update the dictionary
-    public void updateDictionary(int docID, String term) {
+    public void updateDictionary(int docID, String term, String type) {
         if (termListVector.containsKey(term)) {
             DocumentTermVector t = (DocumentTermVector) termListVector.get(term);
             t.updateDocumentTermVector(docID);
         } else {
             DocumentTermVector t = new DocumentTermVector(docID);
             termListVector.put(term, t);
+            if ("body".equals(type)) {
+                t.updateTF(docID);
+            }
             total_terms++;
         }
     }
@@ -96,15 +100,17 @@ public class Dictionary {
         reviewClassification.put(docID, polarity);
         Stemmer stemmer = new Stemmer();
         String comment = review.getComment();
-        String rawReview = toRawReview(comment);
+        String title = review.getTitle();
+        String rawReview = toRawString(comment);
+        String rawTitle = toRawString(title);
         StringTokenizer st = new StringTokenizer(rawReview);
         while (st.hasMoreTokens()) {
             String token = st.nextToken();
             //if (StopWordList.isStopWord(token)) {
-                //continue;
+            //continue;
             //}
             String stemWord = stemmer.stem(token);
-            updateDictionary(docID, stemWord);
+            updateDictionary(docID, stemWord, "body");
         }
     }
 
@@ -135,12 +141,12 @@ public class Dictionary {
     public int dictionaryBuilder(Review[] trainingReviewList, Review[] testReviewList) {
         this.trainingReviewList = trainingReviewList;
         this.testReviewList = testReviewList;
-        int total_reviews = trainingReviewList.length;
+        int total_reviews = this.trainingReviewList.length;
 
         for (int i = 0; i < total_reviews; i++) {
-            reviewScanner(trainingReviewList[i]);
+            reviewScanner(this.trainingReviewList[i]);
         }
-
+        
         //update the tf_idf of the term
         LabelTermVector labeltermvector = new LabelTermVector();
         labeltermvector.buildLabelTermVector(termListVector, reviewClassification, total_terms);
@@ -227,10 +233,10 @@ public class Dictionary {
     }//end of main
 
     //remove punctuation marks of the review
-    public String toRawReview(String review) {
-        String rawReview = review.replaceAll("\\p{Punct}+", " ");
-        rawReview = rawReview.toLowerCase();
-        return rawReview;
+    public String toRawString(String string) {
+        String rawString = string.replaceAll("\\p{Punct}+", " ");
+        rawString = rawString.toLowerCase();
+        return rawString;
     }
 
     public static void main(String[] args) {

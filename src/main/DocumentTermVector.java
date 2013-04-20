@@ -25,7 +25,7 @@ public class DocumentTermVector {
     public DocumentTermVector(int docID) {
         df = 1;
         tf = new Hashtable();
-        tf.put(docID, 1.0);
+        tf.put(docID, 0.0);
     }
 
     public int getDF() {
