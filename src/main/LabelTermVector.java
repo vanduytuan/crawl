@@ -35,9 +35,8 @@ public class LabelTermVector {
         return Math.log10(total_terms / df_value);
     }
 
-    public void update(Hashtable<String, DocumentTermVector> termListVector,
+    public void buildLabelTermVector(Hashtable<String, DocumentTermVector> termListVector,
             Hashtable<Integer, Double> reviewClassification, int total_terms) {
-
 
         double[] termLabel = new double[3];
         double df_value, idf_value, tf_idf_value;
@@ -58,6 +57,14 @@ public class LabelTermVector {
                 termLabel[polarity] += (double) (t.getTF().get(docID));
             }
 
+            /*
+            if ("had".equals(term)) {
+                for (int i = 0; i < 3; i++) {
+                    System.out.println("Nghia " + termLabel[i]);
+                }
+            }
+            */
+            
             for (int i = 0; i < 3; i++) {
                 df_value = ((DocumentTermVector) termListVector.get(term)).getDF();
                 idf_value = computeIDF(df_value, total_terms);

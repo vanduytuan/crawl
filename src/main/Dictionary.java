@@ -25,6 +25,7 @@ import org.xml.sax.SAXParseException;
 public class Dictionary {
 
     Hashtable<String, DocumentTermVector> termListVector;
+    Hashtable<String, DocumentTermVector> titleListVector;
     Hashtable<Integer, Double> reviewClassification;
     Hashtable<String, Double>[] bayesTermWeight;
     Review[] trainingReviewList;
@@ -79,7 +80,7 @@ public class Dictionary {
     public void updateDictionary(int docID, String term) {
         if (termListVector.containsKey(term)) {
             DocumentTermVector t = (DocumentTermVector) termListVector.get(term);
-            t.updateTermVector(docID);
+            t.updateDocumentTermVector(docID);
         } else {
             DocumentTermVector t = new DocumentTermVector(docID);
             termListVector.put(term, t);
@@ -99,9 +100,9 @@ public class Dictionary {
         StringTokenizer st = new StringTokenizer(rawReview);
         while (st.hasMoreTokens()) {
             String token = st.nextToken();
-            if (StopWordList.isStopWord(token)) {
-                continue;
-            }
+            //if (StopWordList.isStopWord(token)) {
+                //continue;
+            //}
             String stemWord = stemmer.stem(token);
             updateDictionary(docID, stemWord);
         }
@@ -118,7 +119,7 @@ public class Dictionary {
 
         //update the tf_idf of the term
         LabelTermVector labeltermvector = new LabelTermVector();
-        labeltermvector.update(termListVector, reviewClassification, total_terms);
+        labeltermvector.buildLabelTermVector(termListVector, reviewClassification, total_terms);
 
         Enumeration e = labeltermvector.label_tf_idf[0].keys();
         while (e.hasMoreElements()) {
@@ -142,7 +143,7 @@ public class Dictionary {
 
         //update the tf_idf of the term
         LabelTermVector labeltermvector = new LabelTermVector();
-        labeltermvector.update(termListVector, reviewClassification, total_terms);
+        labeltermvector.buildLabelTermVector(termListVector, reviewClassification, total_terms);
 
         Enumeration e = labeltermvector.label_tf_idf[0].keys();
         while (e.hasMoreElements()) {
@@ -159,6 +160,7 @@ public class Dictionary {
     public double computeBayesTermWeight(LabelTermVector labeltermvector, String term, int i) {
         double tf_idf_value = (double) labeltermvector.label_tf_idf[i].get(term);
         double weight = (tf_idf_value + 1) / (labeltermvector.label_tf_idf_sum[i] + total_terms);
+        //double weight = tf_idf_value;
         return weight;
     }
 
@@ -207,16 +209,6 @@ public class Dictionary {
                     trainingReviewList[trainingCount] = new Review(docID, stars, comment, title, polarity);
                     trainingCount++;
                 }
-                //if (count >= 100) {
-                //break;
-                //}
-                //System.out.println(docID);
-                //System.out.println(stars);
-                //System.out.println(comment);
-                //System.out.println(title);
-                //System.out.println(polarity);
-                //System.out.println();
-                //System.out.println(review.comment);
             }
 
         } catch (SAXParseException err) {
@@ -245,12 +237,13 @@ public class Dictionary {
         Dictionary d = new Dictionary();
         int total_reviews = d.dictionaryBuilder("labelData.xml");
         Hashtable[] test = d.bayesTermWeight;
-        Enumeration e = test[1].keys();
-        //System.out.println(termListVector.size());
+        Enumeration e = test[2].keys();
         double sum = 0.0;
+        //int count = 0;
         while (e.hasMoreElements()) {
             String term = e.nextElement().toString();
-            sum += (double) test[0].get(term);
+            sum += (double) test[2].get(term);
+            //count++;
             System.out.println(term + " " + test[2].get(term));
         }
         System.out.println("DKM " + sum);
