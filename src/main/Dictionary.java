@@ -147,6 +147,7 @@ public class Dictionary {
             reviewScanner(this.trainingReviewList[i]);
         }
         
+
         //update the tf_idf of the term
         LabelTermVector labeltermvector = new LabelTermVector();
         labeltermvector.buildLabelTermVector(termListVector, reviewClassification, total_terms);

@@ -113,7 +113,7 @@ public class NaiveBayesClassifier {
             dict[i] = new Dictionary();
         }
 
-        for (int i = 2; i < 12; i++) {
+        for (int i = 1; i < 11; i++) {
             Review[] newTestReviewList = new Review[12];
             Review[] newTrainingReviewList = new Review[108];
             for (int j = i; j < 108 + i; j++) {
@@ -131,7 +131,7 @@ public class NaiveBayesClassifier {
             }
 
             System.out.println();
-            dict[i-2].dictionaryBuilder(newTrainingReviewList, newTestReviewList);
+            dict[i-1].dictionaryBuilder(newTrainingReviewList, newTestReviewList);
             //System.out.println("WTF " + dict[i].getTrainingReviewList().length);
             /*
             Review[] r = dict[0].getTestReviewList();
