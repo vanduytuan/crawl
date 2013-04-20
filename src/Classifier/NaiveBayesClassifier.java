@@ -27,39 +27,44 @@ public class NaiveBayesClassifier {
         Dictionary[] dict = nbc.tenFoldValidation(d.getTrainingReviewList());
         //d = nbc.tenFoldValidation(d.getTrainingReviewList());
         int count = 0;
-        Review[] testReviewList = new Review[12];
-        for (int iteration = 0; iteration < 10; iteration++) {
-            d = dict[iteration];
-            Hashtable<String, Double>[] bayesTermWeight = d.getNaiveBayesTermWeight();
-            testReviewList = d.getTestReviewList();
-            for (int i = 0; i < testReviewList.length; i++) {
-                //System.out.println(testReviewList[i].getPolarity());
-            }
-            System.out.println();
-            double[] polarity = new double[testReviewList.length];
-            double[] confidence = new double[testReviewList.length];
-            int[] classCounter = d.getClassCounter();
-            double[] classPriorProb = new double[3];
+        Review[] trainingReviewList, testReviewList;
 
-            for (int i = 0; i < 3; i++) {
-                System.out.println("DKM " + classCounter[i]);
-                classPriorProb[i] = classCounter[i] / 100.0;
-            }
+        //for (int iteration = 0; iteration < 10; iteration++) {
+        //d = dict[iteration];
+        Hashtable<String, Double>[] bayesTermWeight = d.getNaiveBayesTermWeight();
+        trainingReviewList = d.getTrainingReviewList();
+        testReviewList = d.getTestReviewList();
+        double[] polarity = new double[1001];
+        double[] confidence = new double[1001];
+        int[] classCounter = d.getClassCounter();
+        double[] classPriorProb = new double[3];
 
-            for (int i = 0; i < testReviewList.length; i++) {
-                double true_value = testReviewList[i].getPolarity() + 1.0;
-                double[] classifierResult = nbc.classifyReview(testReviewList[i], classPriorProb, bayesTermWeight);
-                polarity[i] = classifierResult[0];
-                confidence[i] = classifierResult[1];
-
-                System.out.println(testReviewList[i].getDocID() + " " + classifierResult[0] + " " + classifierResult[1] + " " + true_value);
-                if (classifierResult[0] == true_value) {
-                    count++;
-                }
-            }
-            System.out.println("---------------");
+        for (int i = 0; i < 3; i++) {
+            //System.out.println("DKM " + classCounter[i]);
+            classPriorProb[i] = classCounter[i] / 100.0;
         }
-        System.out.println(count);
+
+        for (int i = 0; i < trainingReviewList.length; i++) {
+            int docID = trainingReviewList[i].getDocID();
+            polarity[docID] = trainingReviewList[i].getPolarity();
+            confidence[docID] = 1;
+        }
+
+        for (int i = 0; i < testReviewList.length; i++) {
+            double true_value = testReviewList[i].getPolarity() + 1.0;
+            double[] classifierResult = nbc.classifyReview(testReviewList[i], classPriorProb, bayesTermWeight);
+            int docID = testReviewList[i].getDocID();
+            polarity[docID] = classifierResult[0];
+            confidence[docID] = classifierResult[1];
+
+            System.out.println(docID + " " + classifierResult[0] + " " + classifierResult[1] + " " + true_value);
+            if (classifierResult[0] == true_value) {
+                count++;
+            }
+        }
+        System.out.println("---------------");
+        //}
+        //System.out.println(count);
     }
 
     public double[] classifyReview(Review review, double[] classPriorProb, Hashtable<String, Double>[] bayesTermWeight) {
@@ -113,7 +118,7 @@ public class NaiveBayesClassifier {
             dict[i] = new Dictionary();
         }
 
-        for (int i = 1; i < 11; i++) {
+        for (int i = 0; i < 10; i++) {
             Review[] newTestReviewList = new Review[12];
             Review[] newTrainingReviewList = new Review[108];
             for (int j = i; j < 108 + i; j++) {
@@ -131,14 +136,7 @@ public class NaiveBayesClassifier {
             }
 
             System.out.println();
-            dict[i-1].dictionaryBuilder(newTrainingReviewList, newTestReviewList);
-            //System.out.println("WTF " + dict[i].getTrainingReviewList().length);
-            /*
-            Review[] r = dict[0].getTestReviewList();
-            for (int k = 0; k < r.length; k++) {
-                System.out.println("DKM " + " " + r[k].getPolarity());
-            }
-            */
+            dict[i].dictionaryBuilder(newTrainingReviewList, newTestReviewList);
         }
         return dict;
     }

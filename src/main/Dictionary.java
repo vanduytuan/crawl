@@ -100,9 +100,7 @@ public class Dictionary {
         reviewClassification.put(docID, polarity);
         Stemmer stemmer = new Stemmer();
         String comment = review.getComment();
-        String title = review.getTitle();
         String rawReview = toRawString(comment);
-        String rawTitle = toRawString(title);
         StringTokenizer st = new StringTokenizer(rawReview);
         while (st.hasMoreTokens()) {
             String token = st.nextToken();
@@ -146,7 +144,7 @@ public class Dictionary {
         for (int i = 0; i < total_reviews; i++) {
             reviewScanner(this.trainingReviewList[i]);
         }
-        
+
 
         //update the tf_idf of the term
         LabelTermVector labeltermvector = new LabelTermVector();
@@ -183,7 +181,7 @@ public class Dictionary {
             NodeList docNL = document.getElementsByTagName("doc");
             int totalDocs = docNL.getLength();
             trainingReviewList = new Review[120];
-            testReviewList = new Review[1191];
+            testReviewList = new Review[880];
             int trainingCount = 0, testCount = 0;
 
             for (int i = 0; i < totalDocs; i++) {
